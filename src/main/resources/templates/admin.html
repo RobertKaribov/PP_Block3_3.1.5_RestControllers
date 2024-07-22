@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en">
+<head>
+    <link rel="stylesheet" href="/css/admin.css">
+    <meta charset="UTF-8">
+    <title>Admin Page</title>
+</head>
+<body>
+<h1 th:align="center">Admin panel</h1>
+<table>
+    <tr th:bgcolor="gray">
+        <th>Id</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Age</th>
+        <th>Roles</th>
+    </tr>
+    <tr th:each="user : ${users}">
+        <td th:text="${user.getId}"></td>
+        <td th:text="${user.getFirstname()}"></td>
+        <td th:text="${user.getLastname()}"></td>
+        <td th:text="${user.getAge}"></td>
+        <td th:text="${user.getAuthorities()}"></td>
+    </tr>
+</table>
+
+<br>
+<form method="post" action="/admin/addUser">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+    <label>
+        <input type="text" name="firstname" placeholder="firstname">
+    </label>
+    <label>
+        <input type="text" name="lastname" placeholder="lastname">
+    </label>
+    <label>
+        <input type="text" name="age" placeholder="age">
+    </label>
+    <label>
+        <input type="text" name="password" placeholder="password">
+    </label>
+    <label class="role-select-container">
+        Role:
+        <select name="role">
+            <option value="ROLE_ADMIN">ADMIN</option>
+            <option value="ROLE_USER">USER</option>
+        </select>
+    </label>
+    <input type="submit" value="Add User">
+</form>
+<br>
+<form method="post" action="/admin/updateUser">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+    <label>
+        <input type="number" name="id" placeholder="id">
+    </label>
+    <label>
+        <input type="text" name="firstname" placeholder="firstname">
+    </label>
+    <label>
+        <input type="text" name="lastname" placeholder="lastname">
+    </label>
+    <label>
+        <input type="text" name="age" placeholder="age">
+    </label>
+    <label>
+        <input type="text" name="password" placeholder="password">
+    </label>
+    <label class="role-select-container">
+        Role:
+        <select name="role">
+            <option value="ROLE_ADMIN">ADMIN</option>
+            <option value="ROLE_USER">USER</option>
+        </select>
+    </label>
+    <input type="submit" value="Update User">
+</form>
+<br>
+<form method="post" action="/admin/deleteUser">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+    <label>
+        <input type="number" name="id" placeholder="id">
+    </label>
+    <input type="submit" value="Delete User">
+</form>
+<br>
+<div class="logout-button-wrapper">
+    <form th:action="@{/logout}" method="post" class="logout-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="submit" value="Logout"/>
+    </form>
+</div>
+</body>
+</html>
