@@ -11,7 +11,9 @@ import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.service.RoleService;
 import ru.kata.spring.boot_security.demo.service.UserService;
 
+import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 
 @Controller
@@ -28,15 +30,21 @@ public class AdminController {
 
 
     @GetMapping("/admin")
-    public String showAllUsers(ModelMap modelMap) {
-        List<User> users = userService.showAllUsers();
-       modelMap.addAttribute("users", users);
+    public String showAllUsers(ModelMap modelMap, Principal principal) {
+        User user = userService.findByFirstname(principal.getName());
+        String userRoles = userService.getUserRoles(user);
+        modelMap.addAttribute("user", user);
+        modelMap.addAttribute("userRoles", userRoles);
+
+        Map<User, String> usersWithRoles = userService.getAllUsersWithRoles();
+        modelMap.addAttribute("usersWithRoles", usersWithRoles);
+
         return "admin";
     }
 
     @PostMapping(value = "/admin/addUser")
-    public String addNewUser(@RequestParam("role") String role, @ModelAttribute("user") User user) {
-        userService.addNewUser(role,user);
+    public String addNewUser(@RequestParam("role") List<String> roles, @ModelAttribute("user") User user) {
+        userService.addNewUser(roles,user);
         return "redirect:/admin";
     }
 

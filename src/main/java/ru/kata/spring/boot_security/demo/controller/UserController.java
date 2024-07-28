@@ -23,7 +23,9 @@ public class UserController {
     public String getUserPage(ModelMap modelMap, Principal principal) {
         String username = principal.getName();
         User user = userService.findByFirstname(username);
+        String userRoles = userService.getUserRoles(user);
         modelMap.addAttribute("user", user);
+        modelMap.addAttribute("userRoles", userRoles);
         return "user";
     }
 }

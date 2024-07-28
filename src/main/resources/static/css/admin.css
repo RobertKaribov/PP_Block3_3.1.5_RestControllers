@@ -1,0 +1,23 @@
+/*Основная часть содержимого страницы*/
+main {
+    /*Высота видимой области страницы*/
+    height: calc(100vh - 50px);
+    /*Если содержимое страницы больше видимой области, то появится скролл*/
+    overflow: auto;
+}
+.logout-button:hover {
+    /*Цвет кнопки в момент наведения курсора, цвет нельзя изменить(переопределить)*/
+    color: white !important;
+}
+/*выравнивание текста по центру для элементов с id:*/
+#editUserId, #editFirstName,
+#editLastName, #editAge, #editPassword,
+#editPassword, #editRole {
+    text-align: center;
+}
+/*выравнивание текста по центру для элементов с id:*/
+#deleteUserId, #deleteUserFirstName,
+#deleteUserLastName, #deleteUserAge, #deleteUserPassword,
+#deleteUserPassword, #deleteUserRole {
+    text-align: center;
+}
