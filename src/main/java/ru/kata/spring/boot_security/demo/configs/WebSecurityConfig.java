@@ -42,9 +42,4 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userServiceImpl).passwordEncoder(NoOpPasswordEncoder.getInstance());
     }
-
-    @Override
-    public void configure(WebSecurity webSecurity)throws Exception {
-        webSecurity.ignoring().antMatchers("/css/**");
-    }
 }
