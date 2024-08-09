@@ -1,21 +1,28 @@
 package ru.kata.spring.boot_security.demo.service;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.kata.spring.boot_security.demo.dto.UserDto;
 import ru.kata.spring.boot_security.demo.model.Role;
 import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repository.RoleRepository;
 import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,40 +31,61 @@ public class UserServiceImpl implements UserDetailsService, UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final ModelMapper modelMapper;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository) {
+    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository, ModelMapper modelMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.modelMapper = modelMapper;
     }
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String firstname) throws UsernameNotFoundException {
-        return userRepository.findByFirstname(firstname);
-    }
-
-    @Override
-    public List<User> showAllUsers() {
-        return userRepository.findAll();
-    }
-
-    @Override
-    @Transactional
-    public void addNewUser(List<String> roles,User saveUser) {
-        for (String role : roles) {
-            Role role1 = roleRepository.findByRole(role);
-            saveUser.getRoles().add(role1);
+        User user = userRepository.findByFirstname(firstname);
+        if (user == null) {
+            throw new UsernameNotFoundException(firstname);
         }
-        userRepository.save(saveUser);
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getRole()))
+                .collect(Collectors.toList());
+
+        return new org.springframework.security.core.userdetails.
+                User(user.getUsername(), user.getPassword(), authorities);
     }
 
     @Override
     @Transactional
-    public void updateUser(String role,User updateUser) {
-        Role role1 = roleRepository.findByRole(role);
-        updateUser.getRoles().add(role1);
-        userRepository.save(updateUser);
+    public void addUser(UserDto userDto) {
+        User user = modelMapper.map(userDto, User.class);
+        Set<Role> roles = userDto.getRoles().stream()
+                .map(role -> roleRepository.findByRole("ROLE_" + role.getRole()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        user.setRoles(roles);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateUser(UserDto userDto) {
+        User users = userRepository.findById(userDto.getId()).orElse(null);
+        if (users != null) {
+            users.setFirstname(userDto.getFirstname());
+            users.setLastname(userDto.getLastname());
+            users.setAge(userDto.getAge());
+            users.setPassword(userDto.getPassword());
+
+            Set<Role> roles = userDto.getRoles().stream()
+                    .map(role -> roleRepository.findByRole("ROLE_" + role.getRole()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            users.setRoles(roles);
+            userRepository.save(users);
+        }
     }
 
     @Override
@@ -72,29 +100,26 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
-    }
-
-    @Override
     public User findByFirstname(String firstname) {
         return userRepository.findByFirstname(firstname);
     }
 
     @Override
-    public String getUserRoles(User user) {
-        return user.getRoles().stream()
-                .map(Role::getRole)
-                .map(roleName -> roleName.replace("ROLE_", ""))
-                .sorted()
-                .collect(Collectors.joining(" "));
-    }
-
-    @Override
-    public Map<User, String> getAllUsersWithRoles() {
-        return userRepository.findAll(Sort.by("id")).stream()
-                .collect(Collectors.toMap(user -> user, this::getUserRoles,
-                        (oldValue,newValue) -> oldValue, LinkedHashMap::new));
+    public Map<User, List<String>> getAllUsersWithRoles() {
+        return userRepository
+                .findAll(Sort.by("id"))
+                .stream()
+                .sorted(Comparator.comparing(User::getId))
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        user -> user.getRoles().stream()
+                                .map(Role::getRole)
+                                .map(roleName -> roleName.replace("ROLE_", ""))
+                                .sorted()
+                                .toList(),
+                        (oldValue, newValue) -> oldValue,
+                        LinkedHashMap::new
+                ));
     }
 
 }

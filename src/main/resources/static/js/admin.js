@@ -1,239 +1,342 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Находим все панели ролей
+
     const rolePanels = document.querySelectorAll('.rolePanel');
-    // Находим все ссылки ролей
     const roleLinks = document.querySelectorAll('.roleLink');
 
-    // Функция для скрытия всех панелей ролей
     function hideAllRolePanels() {
-        // Проходим по всем панелям и скрываем их
         rolePanels.forEach(panel => panel.style.display = 'none');
     }
 
-    // Функция для сброса стиля активной роли
     function resetActiveRoleStyle() {
-        // Находим текущую активную роль
         const activeRole = document.querySelector('.bg-primary');
-        // Если активная роль найдена, убираем классы стилей
         if (activeRole) {
             activeRole.classList.remove('bg-primary', 'text-white');
         }
     }
 
-    // Для каждой ссылки ролей
     roleLinks.forEach(link => {
-        // Добавляем обработчик события клика
         link.addEventListener('click', event => {
-            // Предотвращаем стандартное поведение ссылки
             event.preventDefault();
 
-            // Сбрасываем стиль активной роли
             resetActiveRoleStyle();
-            // Скрываем все панели ролей
             hideAllRolePanels();
 
-            // Добавляем классы стилей кликнутой ссылке
             event.target.classList.add('bg-primary', 'text-white');
-            // Получаем панель роли по data-role атрибуту
             const rolePanel =
                 document.getElementById(
                     `${event.target
                         .getAttribute('data-role')
                         .toLowerCase()}Panel`);
-            // Если панель роли найдена, показываем её
             if (rolePanel) {
                 rolePanel.style.display = 'block';
             }
         });
     });
 
-    // Скрываем все панели ролей при загрузке страницы
     hideAllRolePanels();
-    // Делаем панель администратора видимой при загрузке страницы
     document.getElementById('adminPanel').style.display = 'block';
+    // код выше реализует переключение между ролями в навигационной панели
 
-    // код выше реализует смену ролей в админ панели в левой части страницы
-    // Функция для заполнения формы данными пользователя
-    function fillFormWithData(button,
-                              userIdInputId,
-                              firstNameInputId,
-                              lastNameInputId,
-                              ageInputId) {
-        let id = button.data('id');
-        let firstname = button.data('firstname');
-        let lastname = button.data('lastname');
-        let age = button.data('age');
+    const CURRENT_ADMIN_URL = "/api/admin";
+    const CSRF_TOKEN_NAME = "_csrf";
+    const CSRF_HEADER_NAME = "X-CSRF-TOKEN";
+    const LOGOUT_URL = "/logout";
+    const SUCCESS_LOGOUT_URL = "/login?logout";
+    const LOGOUT_BUTTON_CLASS = ".logout-button";
 
-        // Заполняем поля формы полученными данными
-        $(userIdInputId).val(id);
-        $(firstNameInputId).val(firstname);
-        $(lastNameInputId).val(lastname);
-        $(ageInputId).val(age);
+    // получаем данные для передачи в модальное окно edit
+    function handleEditButtonClick(userId, firstname, lastname, age, role) {
+
+        const editUserModal = document.querySelector('#editUserModal');
+
+        const userIdInput = editUserModal.querySelector('#editUserId');
+        const firstnameInput = editUserModal.querySelector('#editFirstName');
+        const lastnameInput = editUserModal.querySelector('#editLastName');
+        const ageInput = editUserModal.querySelector('#editAge');
+        const roleInput = editUserModal.querySelector('#editRole');
+
+        userIdInput.value = userId;
+        firstnameInput.value = firstname;
+        lastnameInput.value = lastname;
+        ageInput.value = age;
+        roleInput.value = role;
+
     }
 
-    let originalUserRoles = null;
-    // для отображения данных в модальном окне редактирования пользователя
-    // Обработчик клика по кнопке редактирования пользователя
-    $('.edit-user-button').click(function () {
-        // Заполняем форму данными пользователя
-        fillFormWithData($(this),
-            '#editUserId',
-            '#editFirstName',
-            '#editLastName',
-            '#editAge');
-        // запоминаем ранее выбранные роли пользователя
-        originalUserRoles = $(this).data('role');
-    });
+    // получаем данные для передачи в модальное окно delete
+    function handleDeleteButtonClick(userId, firstname, lastname, age, role) {
 
-    // Обработчик клика по кнопке удаления пользователя
-    $('.delete-user-button').click(function () {
-        // Заполняем форму данными пользователя
-        fillFormWithData($(this),
-            '#deleteUserId',
-            '#deleteUserFirstName',
-            '#deleteUserLastName',
-            '#deleteUserAge');
-        // Устанавливаем роль пользователя в форму
-        $('#deleteUserRole').val($(this).data('role'));
-    });
+        const deleteUserModal = document.querySelector('#deleteUserModal');
 
-    // Обработчик клика по кнопке сохранения изменений в модальном окне редактирования
-    document.querySelector('#editUserModal .save-changes').addEventListener('click', function (e) {
-        e.preventDefault();
+        const userIdInput = deleteUserModal.querySelector('#deleteUserId');
+        const firstnameInput = deleteUserModal.querySelector('#deleteUserFirstName');
+        const lastnameInput = deleteUserModal.querySelector('#deleteUserLastName');
+        const ageInput = deleteUserModal.querySelector('#deleteUserAge');
+        const roleInput = deleteUserModal.querySelector('#deleteUserRole');
 
-        // Получаем данные из формы
-        let id = document.querySelector('#editUserId').value;
-        let firstname = document.querySelector('#editFirstName').value;
-        let lastname = document.querySelector('#editLastName').value;
-        let age = document.querySelector('#editAge').value;
-        let password = document.querySelector('#editPassword').value;
+        userIdInput.value = userId;
+        firstnameInput.value = firstname;
+        lastnameInput.value = lastname;
+        ageInput.value = age;
+        roleInput.value = role;
+    }
 
-        // Получаем токен CSRF и заголовок из мета-тегов
-        let token = $("meta[name='_csrf']").attr("content");
-        let header = $("meta[name='_csrf_header']").attr("content");
-
-        // Получаем выбранные роли из выпадающего списка
-        let selectElement = document.querySelector('#editRole');
-        let selectedOptions = Array.from(selectElement.selectedOptions);
-        let roles = selectedOptions.map(option => {
-            if (option.value === "User") {
-                return "ROLE_USER";
-            } else if (option.value === "Admin") {
-                return "ROLE_ADMIN";
-            }
-        });
-
-        // Формируем параметры запроса
-        let params = new URLSearchParams({
-            id: id,
-            firstname: firstname,
-            lastname: lastname,
-            age: age,
-            password: password,
-        });
-
-        // Добавляем роли в параметры запроса
-        roles.forEach(role => params.append('role', role)); // Добавляем каждую роль
-
-        // Отправляем запрос на обновление пользователя
-        fetch('/admin/updateUser', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                [header]: token
-            },
-            body: params,
-        })
-            // После успешного запроса скрываем модальное окно и обновляем страницу
+    // функция для получения всех пользователей
+    // и добавление данных в модальные окна
+    function getUsersAndDisplayInTable() {
+        fetch(CURRENT_ADMIN_URL + "/all-users")
             .then(response => {
-                $('#editUserModal').modal('hide');
-                location.reload();
-            });
-    });
-
-    // обработка кнопки Delete в модальном окне удаления пользователя.
-    document.querySelector('.delete-user-button-confirm').addEventListener('click', function (e) {
-        // Предотвращаем стандартное поведение кнопки
-        e.preventDefault();
-
-        // Получаем id пользователя из формы
-        let id = document.querySelector('#deleteUserId').value;
-
-        // Получаем токен CSRF и заголовок из мета-тегов
-        let token = $("meta[name='_csrf']").attr("content");
-        let header = $("meta[name='_csrf_header']").attr("content");
-
-        // Отправляем запрос на удаление пользователя
-        fetch('/admin/deleteUser', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                [header]: token
-            },
-            body: new URLSearchParams({
-                id: id
-            }),
-        })
-            // После успешного запроса скрываем модальное окно и обновляем страницу
-            .then(response => {
-                $('#deleteUserModal').modal('hide');
-                location.reload();
+                if (!response.ok) {
+                    console.error('Ошибка при получении данных');
+                }
+                return response.json();
             })
-    });
+            .then(data => {
+                const usersWithRoles = data;
+                const tableBody = document.querySelector('#usersTable');
+                if (!tableBody) {
+                    console.error('Элемент таблицы не найден');
+                }
+                tableBody.innerHTML = '';
+                Object.values(usersWithRoles).forEach(user => {
+                    const row = createTableRow(user);
+                    tableBody.appendChild(row);
 
-    // Обработчик отправки формы добавления нового пользователя
-    document.querySelector('.add-user-form').addEventListener('submit', function (event) {
-        // Предотвращаем стандартное поведение формы
+                    const editButton = row.querySelector('.edit-user-button');
+                    const deleteButton = row.querySelector('.delete-user-button');
+
+                    editButton.addEventListener('click', () => {
+                        handleEditButtonClick(
+                            user.id,
+                            user.firstname,
+                            user.lastname,
+                            user.age,
+                            user.roles.map(role => role.role.replace('ROLE_', '')).sort().join(' ')
+                        );
+                    });
+
+                    deleteButton.addEventListener('click', () => {
+                        handleDeleteButtonClick(
+                            user.id,
+                            user.firstname,
+                            user.lastname,
+                            user.age,
+                            user.roles.map(role => role.role.replace('ROLE_', '')).sort().join(' ')
+                        );
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+    }
+
+    // получение информации о текущем пользователе
+    // используются в шапке админ панели
+    // и в окне роли User в навигационной панели
+    fetch(CURRENT_ADMIN_URL + "/current-user")
+        .then(response => {
+            if (!response.ok) {
+                console.error('Ошибка при получении данных');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const currentUser = data;
+            const userId = currentUser.id;
+            const firstname = currentUser.firstname;
+            const lastname = currentUser.lastname;
+            const age = currentUser.age;
+            const roles = currentUser.roles.map(role => role.role.replace('ROLE_', '')).sort();
+
+            document.getElementById('user-firstname').textContent = firstname;
+            document.getElementById('user-roles').textContent = roles.join(' ');
+
+            document.getElementById('currentUserId').textContent = userId;
+            document.getElementById('currentUserFirstName').textContent = firstname;
+            document.getElementById('currentUserLastName').textContent = lastname;
+            document.getElementById('currentUserAge').textContent = age;
+            document.getElementById('currentUserRoles').textContent = roles.join(' ');
+        })
+        .catch(error => {
+            console.error('Ошибка при получении данных:', error);
+        });
+
+    // создание таблицы с данными о пользователях
+    // и добавление кнопок "Edit" и "Delete"
+    function createTableRow(user) {
+        const userId = user.id;
+        const firstname = user.firstname;
+        const lastname = user.lastname;
+        const age = user.age;
+        const roles = user.roles.map(role => role.role.replace('ROLE_', '')).sort();
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+  <td class="align-middle">${userId}</td>
+  <td class="align-middle">${firstname}</td>
+  <td class="align-middle">${lastname}</td>
+  <td class="align-middle">${age}</td>
+  <td class="align-middle">${Array.isArray(roles) ? roles.join(' ') : ''}</td>
+  <td class="align-middle">
+    <button class="btn btn-sm btn-outline-primary edit-user-button" data-bs-toggle="modal"
+            data-bs-target="#editUserModal">
+      Edit
+    </button>
+  </td>
+  <td class="align-middle">
+    <button class="btn btn-outline-danger btn-sm delete-user-button" data-bs-toggle="modal"
+            data-bs-target="#deleteUserModal">
+      Delete
+    </button>
+  </td>
+`;
+
+        return row;
+    }
+
+    getUsersAndDisplayInTable();
+
+    // реализация кнопки add new user в вкладке New user
+    document.querySelector('.add-user-form').addEventListener('submit', function(event) {
         event.preventDefault();
 
-        // Получаем данные из формы
-        let firstname = document.querySelector('#new_firstName').value;
-        let lastname = document.querySelector('#new_lastName').value;
-        let age = document.querySelector('#new_age').value;
-        let password = document.querySelector('#new_password').value;
+        const firstName = document.getElementById('new_firstName').value;
+        const lastName = document.getElementById('new_lastName').value;
+        const age = document.getElementById('new_age').value;
+        const password = document.getElementById('new_password').value;
+        const selectedRoles = Array.from(document.getElementById('new_role').selectedOptions).map(option => option.value);
 
-        // Получаем токен CSRF и заголовок из мета-тегов
-        let token = $("meta[name='_csrf']").attr("content");
-        let header = $("meta[name='_csrf_header']").attr("content");
-
-        // Получаем выбранные роли из выпадающего списка
-        let selectElement = document.querySelector('#new_role');
-        let selectedOptions = Array.from(selectElement.selectedOptions);
-
-        // Преобразуем роли в формат для отправки на сервер
-        let roles = selectedOptions.map(option => {
-            if (option.value === "User") {
-                return "ROLE_USER";
-            } else if (option.value === "Admin") {
-                return "ROLE_ADMIN";
-            }
-        });
-
-        // Формируем параметры запроса
-        let params = new URLSearchParams({
-            firstname: firstname,
-            lastname: lastname,
+        const newUser = {
+            firstname: firstName,
+            lastname: lastName,
             age: age,
             password: password,
+            roles: selectedRoles
+        };
+
+        const token = document.querySelector(`meta[name="${CSRF_TOKEN_NAME}"]`).getAttribute("content");
+        const headers = new Headers({
+            "Content-Type": "application/json",
+            [CSRF_HEADER_NAME]: token
         });
 
-        // Добавляем роли в параметры запроса
-        roles.forEach(role => params.append('role', role)); // Добавляем каждую роль
-
-        // Отправляем запрос на добавление пользователя
-        fetch('/admin/addUser', {
+        fetch(CURRENT_ADMIN_URL + "/addUser", {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                [header]: token
-            },
-            body: params,
+            headers: headers,
+            body: JSON.stringify(newUser)
         })
-            // После успешного запроса обновляем страницу
             .then(response => {
-                location.reload();
+                if (!response.ok) {
+                    console.error('Ошибка при добавлении пользователя');
+                }
+                return response.text();
+            })
+            .then(data => {
+                // Обновляем таблицу
+                getUsersAndDisplayInTable();
+                // Переключаемся на вкладку User table
+                $('a[href="#userTable"]').tab('show');
+            })
+            .catch(error => {
+                console.error('Ошибка при добавлении пользователя:', error);
             });
     });
 
-});
+    // реализация кнопки delete в модальном окне для удаления пользователя
+    document.querySelector('.delete-user-button-confirm').addEventListener('click', function () {
 
+        const token = document.querySelector(`meta[name="${CSRF_TOKEN_NAME}"]`).getAttribute("content");
+        const headers = new Headers({
+            "Content-Type": "application/json",
+            [CSRF_HEADER_NAME]: token
+        });
+
+        fetch(CURRENT_ADMIN_URL + "/deleteUser", {
+            method: 'DELETE',
+            headers: headers,
+            body: JSON.stringify({
+                id: document.querySelector('#deleteUserId').value
+            })
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    console.error('Ошибка при удалении пользователя');
+                }
+                // Обновляем таблицу
+                getUsersAndDisplayInTable();
+                // Закрываем модальное окно
+                $('#deleteUserModal').modal('hide');
+            })
+            .catch(function (error) {
+                console.error('Ошибка:', error);
+            });
+    });
+
+    // реализация кнопки save changes в модальном окне для редактирования пользователя
+    document.querySelector('.save-changes').addEventListener('click', function () {
+
+        let user = {
+            id: document.querySelector('#editUserId').value, // Добавьте это поле
+            firstname: document.querySelector('#editFirstName').value,
+            lastname: document.querySelector('#editLastName').value,
+            age: document.querySelector('#editAge').value,
+            password: document.querySelector('#editPassword').value,
+            roles: Array.from(document.getElementById('editRole').selectedOptions).map(option => option.value.toUpperCase())
+        };
+
+        const token = document.querySelector(`meta[name="${CSRF_TOKEN_NAME}"]`).getAttribute("content");
+        const headers = new Headers({
+            "Content-Type": "application/json",
+            [CSRF_HEADER_NAME]: token
+        });
+
+        fetch(CURRENT_ADMIN_URL + "/updateUser", {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(user)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Ошибка при обновлении пользователя');
+                }
+                return response.text();
+            })
+            .then(data => {
+                // Обновляем таблицу
+                getUsersAndDisplayInTable();
+                // Закрываем модальное окно
+                $('#editUserModal').modal('hide');
+            })
+            .catch(error => {
+                console.error('Ошибка при обновлении пользователя:', error);
+            });
+    });
+
+    // реализация кнопки logout
+    document.querySelector(LOGOUT_BUTTON_CLASS).addEventListener("click", async function (event) {
+        event.preventDefault();
+
+        const token = document.querySelector(`meta[name="${CSRF_TOKEN_NAME}"]`).getAttribute("content");
+        const headers = new Headers({
+            "Content-Type": "application/json",
+            [CSRF_HEADER_NAME]: token
+        });
+
+        try {
+            const response = await fetch(LOGOUT_URL, {
+                method: "POST",
+                headers: headers,
+                body: "dummy=data"
+            });
+
+            if (!response.ok) {
+                console.error(`Ошибка выхода: ${response.statusText}`);
+            }
+
+            window.location.href = SUCCESS_LOGOUT_URL;
+        } catch (error) {
+            console.error("Ошибка:", error);
+        }
+    });
+});

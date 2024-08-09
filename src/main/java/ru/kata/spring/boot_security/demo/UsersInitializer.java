@@ -6,28 +6,36 @@ import org.springframework.stereotype.Component;
 import ru.kata.spring.boot_security.demo.model.Role;
 import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repository.RoleRepository;
-import ru.kata.spring.boot_security.demo.service.UserService;
+import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Component
 public class UsersInitializer implements CommandLineRunner {
-    private final UserService userService;
+    private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     @Autowired
-    public UsersInitializer(UserService userService, RoleRepository roleRepository) {
-        this.userService = userService;
+    public UsersInitializer(UserRepository userRepository, RoleRepository roleRepository) {
+        this.userRepository = userRepository;
         this.roleRepository = roleRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
-        roleRepository.saveAll(Set.of(new Role("ROLE_ADMIN"), new Role("ROLE_USER")));
+        Role adminRole = new Role("ROLE_ADMIN");
+        Role userRole = new Role("ROLE_USER");
 
-        userService.addNewUser(List.of("ROLE_USER", "ROLE_ADMIN"), new User("admin", "adminAdmin", 45, "admin"));
+        roleRepository.save(adminRole);
+        roleRepository.save(userRole);
 
-        userService.addNewUser(List.of("ROLE_USER"), new User("user", "userUser", 66, "user"));
+        User admin = new User("admin", "adminAdmin", 45, "admin");
+        admin.setRoles(new HashSet<>(List.of(adminRole, userRole)));
+        userRepository.save(admin);
 
+        User user = new User("user", "userUser", 66, "user");
+        user.setRoles(new HashSet<>(List.of(userRole)));
+        userRepository.save(user);
     }
 }
