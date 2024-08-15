@@ -28,9 +28,9 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private String firstname;
+    private String firstName;
 
-    private String lastname;
+    private String lastName;
 
     private int age;
 
@@ -41,8 +41,8 @@ public class User implements UserDetails {
 
 
     public User(String firstname, String lastname, int age, String password) {
-        this.firstname = firstname;
-        this.lastname = lastname;
+        this.firstName = firstname;
+        this.lastName = lastname;
         this.age = age;
         this.password = password;
     }
@@ -55,7 +55,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return firstname;
+        return firstName;
     }
 
 
@@ -88,8 +88,8 @@ public class User implements UserDetails {
     public String toString() {
         return "User{" +
                 "id=" + id +
-                ", name='" + firstname + '\'' +
-                ", surname='" + lastname + '\'' +
+                ", name='" + firstName + '\'' +
+                ", surname='" + lastName + '\'' +
                 ", age=" + age +
                 ", password='" + password + '\'' +
                 '}';

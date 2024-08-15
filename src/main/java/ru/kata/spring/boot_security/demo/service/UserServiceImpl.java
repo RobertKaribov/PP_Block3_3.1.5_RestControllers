@@ -73,8 +73,8 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     public void updateUser(UserDto userDto) {
         User users = userRepository.findById(userDto.getId()).orElse(null);
         if (users != null) {
-            users.setFirstname(userDto.getFirstname());
-            users.setLastname(userDto.getLastname());
+            users.setFirstName(userDto.getFirstName());
+            users.setLastName(userDto.getLastName());
             users.setAge(userDto.getAge());
             users.setPassword(userDto.getPassword());
 
