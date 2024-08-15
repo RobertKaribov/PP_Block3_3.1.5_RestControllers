@@ -21,7 +21,7 @@ public class AdminRestController {
         this.userService = userService;
     }
 
-    @GetMapping("/current-user")
+    @GetMapping("/current-users")
     public User getCurrentUser(Principal principal) {
         return userService.findByFirstname(principal.getName());
     }
